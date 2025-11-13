@@ -3,13 +3,13 @@ import { GoogleGenAI, Type } from "@google/genai";
 import type { Truck, GasStation, RoutePlan } from '../types';
 import { DEPOT_COORDINATES } from '../constants';
 
-const API_KEY = process.env.API_KEY;
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
 
 if (!API_KEY) {
-  console.warn("API_KEY for Gemini is not set. Route optimization will not work.");
+  console.warn("VITE_GEMINI_API_KEY for Gemini is not set. Route optimization will not work.");
 }
 
-const ai = new GoogleGenAI({ apiKey: API_KEY! });
+const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 
 const routePlanSchema = {
   type: Type.ARRAY,
@@ -49,8 +49,8 @@ export const optimizeRoute = async (
   truck: Truck,
   stationsToRefuel: { station: GasStation; fuelNeeded: { type: string; volume: number }[] }[]
 ): Promise<RoutePlan[] | null> => {
-  if (!API_KEY) {
-    throw new Error("API_KEY for Gemini is not set.");
+  if (!API_KEY || !ai) {
+    throw new Error("VITE_GEMINI_API_KEY for Gemini is not set.");
   }
 
   // Filter stations to only include those that need the fuel the selected truck carries.
