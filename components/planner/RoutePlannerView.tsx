@@ -121,7 +121,6 @@ export const RoutePlannerView: React.FC = () => {
         };
 
         updateTruckStatus(TruckStatus.EN_ROUTE);
-        alert(`Грузовик ${truckId} (${driver}) отправлен к АЗС. Время в пути: ${DRIVE_TIME / 1000} сек.`);
 
         setOptimizedRoute(null);
         setSelectedTruckId(null);
@@ -129,7 +128,6 @@ export const RoutePlannerView: React.FC = () => {
 
         setTimeout(() => {
             updateTruckStatus(TruckStatus.UNLOADING);
-            alert(`Грузовик ${truckId} прибыл. Начинается разгрузка (${UNLOAD_TIME / 1000} сек).`);
 
             setTimeout(() => {
                 setStations(prevStations => {
@@ -172,16 +170,13 @@ export const RoutePlannerView: React.FC = () => {
                 };
                 setLogs(prevLogs => [newLog, ...prevLogs]);
 
-                alert(`Разгрузка завершена. Грузовик ${truckId} выезжает обратно (${RETURN_TIME / 1000} сек).`);
                 updateTruckStatus(TruckStatus.EN_ROUTE);
 
                 setTimeout(() => {
                     updateTruckStatus(TruckStatus.LOADING);
-                    alert(`Грузовик ${truckId} вернулся на базу. Идет загрузка (${LOAD_TIME / 1000} сек).`);
 
                     setTimeout(() => {
                         updateTruckStatus(TruckStatus.IDLE);
-                        alert(`Грузовик ${truckId} готов к новым рейсам.`);
                     }, LOAD_TIME);
                 }, RETURN_TIME);
 
