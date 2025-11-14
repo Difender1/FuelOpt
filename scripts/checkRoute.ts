@@ -1,4 +1,4 @@
-import { optimizeRoute } from '../services/geminiService';
+import { handler } from '../netlify/functions/optimizeRoute';
 import { MOCK_TRUCKS, MOCK_STATIONS } from '../constants';
 import type { GasStation } from '../types';
 
@@ -29,8 +29,13 @@ const buildStationsToRefuel = (stations: GasStation[]) => {
 async function main() {
   try {
     const stationsToRefuel = buildStationsToRefuel(MOCK_STATIONS);
-    const result = await optimizeRoute(truck, stationsToRefuel);
-    console.log('Оптимизированный маршрут:', JSON.stringify(result, null, 2));
+    const event = {
+      httpMethod: 'POST',
+      body: JSON.stringify({ truck, stationsToRefuel }),
+    };
+    const response = await handler(event);
+    console.log('Status:', response.statusCode);
+    console.log('Body:', response.body);
   } catch (error) {
     console.error('Ошибка при проверке сервиса оптимизации:', error);
     process.exitCode = 1;
