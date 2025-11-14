@@ -95,81 +95,99 @@ export const RoutePlannerView: React.FC = () => {
         }
     };
 
+    const DRIVE_TIME = 5000;
+    const UNLOAD_TIME = 3000;
+    const RETURN_TIME = 5000;
+    const LOAD_TIME = 3000;
+
     const handleDispatch = () => {
         if (!optimizedRoute || optimizedRoute.length === 0) return;
-    
+
         const plan = optimizedRoute[0];
         const { truckId, driver, route, totalVolumeLoaded, fuelType, estimatedCost } = plan;
-    
-        // 1. Truck departs: Change status to EN_ROUTE
-        setTrucks(prevTrucks =>
-            prevTrucks.map(t =>
-                t.id === truckId ? { ...t, status: TruckStatus.EN_ROUTE } : t
-            )
-        );
-        alert(`Грузовик ${truckId} (${driver}) отправлен в рейс.`);
-    
-        // 2. Reset planner UI so user can continue working
+
+        const truck = trucks.find(t => t.id === truckId);
+        if (!truck || truck.status !== TruckStatus.IDLE) {
+            alert('Этот грузовик сейчас занят. Дождитесь, пока он снова будет простаивать.');
+            return;
+        }
+
+        const updateTruckStatus = (status: TruckStatus) => {
+            setTrucks(prevTrucks =>
+                prevTrucks.map(t =>
+                    t.id === truckId ? { ...t, status } : t
+                )
+            );
+        };
+
+        updateTruckStatus(TruckStatus.EN_ROUTE);
+        alert(`Грузовик ${truckId} (${driver}) отправлен к АЗС. Время в пути: ${DRIVE_TIME / 1000} сек.`);
+
         setOptimizedRoute(null);
         setSelectedTruckId(null);
         setSelectedStationIds([]);
-    
-        // 3. Simulate delivery after 5 seconds
+
         setTimeout(() => {
-            // Update station fuel levels
-            setStations(prevStations => {
-                let updatedStations = [...prevStations];
-                route.forEach(step => {
-                    if (step.type === 'station' && step.action.startsWith('Разгрузить')) {
-                        const match = step.action.match(/Разгрузить\s+([\d\s]+)л\s+(.+)/);
-                        if (match) {
-                            const volumeDelivered = parseInt(match[1].replace(/\s/g, ''), 10);
-                            const fuelTypeDelivered = match[2] as FuelType;
-    
-                            updatedStations = updatedStations.map(station => {
-                                if (station.name === step.name) {
-                                    const newFuelLevels = station.fuelLevels.map(fl => {
-                                        if (fl.type === fuelTypeDelivered) {
-                                            const newLevel = Math.min(fl.max, fl.current + volumeDelivered);
-                                            return { ...fl, current: newLevel };
-                                        }
-                                        return fl;
-                                    });
-                                    return { ...station, fuelLevels: newFuelLevels };
-                                }
-                                return station;
-                            });
-                        }
-                    }
-                });
-                return updatedStations;
-            });
-    
-            // Create new log entry
-            const newLog: DeliveryLog = {
-                id: `l${Date.now()}`,
-                date: new Date().toISOString(),
-                truckId: truckId,
-                driver: driver,
-                route: route.map(step => step.name),
-                volume: totalVolumeLoaded,
-                fuelType: fuelType,
-                cost: estimatedCost,
-            };
-            setLogs(prevLogs => [newLog, ...prevLogs]);
-    
-            alert(`Топливо доставлено. Грузовик ${truckId} возвращается на базу.`);
-    
-            // 4. Simulate return trip (another 5 seconds)
+            updateTruckStatus(TruckStatus.UNLOADING);
+            alert(`Грузовик ${truckId} прибыл. Начинается разгрузка (${UNLOAD_TIME / 1000} сек).`);
+
             setTimeout(() => {
-                setTrucks(prevTrucks =>
-                    prevTrucks.map(t =>
-                        t.id === truckId ? { ...t, status: TruckStatus.IDLE } : t
-                    )
-                );
-                alert(`Грузовик ${truckId} вернулся на базу и готов к новым рейсам.`);
-            }, 5000);
-        }, 5000);
+                setStations(prevStations => {
+                    let updatedStations = [...prevStations];
+                    route.forEach(step => {
+                        if (step.type === 'station' && step.action.startsWith('Разгрузить')) {
+                            const match = step.action.match(/Разгрузить\s+([\d\s]+)л\s+(.+)/);
+                            if (match) {
+                                const volumeDelivered = parseInt(match[1].replace(/\s/g, ''), 10);
+                                const fuelTypeDelivered = match[2] as FuelType;
+
+                                updatedStations = updatedStations.map(station => {
+                                    if (station.name === step.name) {
+                                        const newFuelLevels = station.fuelLevels.map(fl => {
+                                            if (fl.type === fuelTypeDelivered) {
+                                                const newLevel = Math.min(fl.max, fl.current + volumeDelivered);
+                                                return { ...fl, current: newLevel };
+                                            }
+                                            return fl;
+                                        });
+                                        return { ...station, fuelLevels: newFuelLevels };
+                                    }
+                                    return station;
+                                });
+                            }
+                        }
+                    });
+                    return updatedStations;
+                });
+
+                const newLog: DeliveryLog = {
+                    id: `l${Date.now()}`,
+                    date: new Date().toISOString(),
+                    truckId: truckId,
+                    driver: driver,
+                    route: route.map(step => step.name),
+                    volume: totalVolumeLoaded,
+                    fuelType: fuelType,
+                    cost: estimatedCost,
+                };
+                setLogs(prevLogs => [newLog, ...prevLogs]);
+
+                alert(`Разгрузка завершена. Грузовик ${truckId} выезжает обратно (${RETURN_TIME / 1000} сек).`);
+                updateTruckStatus(TruckStatus.EN_ROUTE);
+
+                setTimeout(() => {
+                    updateTruckStatus(TruckStatus.LOADING);
+                    alert(`Грузовик ${truckId} вернулся на базу. Идет загрузка (${LOAD_TIME / 1000} сек).`);
+
+                    setTimeout(() => {
+                        updateTruckStatus(TruckStatus.IDLE);
+                        alert(`Грузовик ${truckId} готов к новым рейсам.`);
+                    }, LOAD_TIME);
+                }, RETURN_TIME);
+
+            }, UNLOAD_TIME);
+
+        }, DRIVE_TIME);
     };
 
 
