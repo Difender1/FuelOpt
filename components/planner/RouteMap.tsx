@@ -18,33 +18,29 @@ export const RouteMap: React.FC<RouteMapProps> = ({ routePlans, isLoading }) => 
     const [error, setError] = useState<string | null>(null);
 
     // Function to create a custom icon for stations
-    const createNumberedIcon = (number: number) => {
-        return L.divIcon({
-            html: `<div class="relative flex items-center justify-center w-8 h-8">
-                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ef4444" class="w-8 h-8 drop-shadow-lg">
-                       <path fill-rule="evenodd" d="M11.54 22.351l.07.04.028.016a.76.76 0 00.723 0l.028-.015.071-.041a16.975 16.975 0 005.16-4.212c1.558-2.22 1.986-4.634 1.986-7.157C20.563 5.424 16.742 2 12 2S3.437 5.424 3.437 10.938c0 2.523.428 4.937 1.986 7.157 1.564 2.22 3.599 3.99 5.16 4.211zM12 12.188a1.25 1.25 0 100-2.5 1.25 1.25 0 000 2.5z" clip-rule="evenodd" />
-                     </svg>
-                     <span class="absolute text-white text-xs font-bold">${number}</span>
-                   </div>`,
+    const createNumberedIcon = (number: number) =>
+        L.divIcon({
+            html: `
+                <div class="flex items-center justify-center w-9 h-9 rounded-full bg-white border-2 border-blue-500 text-blue-700 font-semibold shadow-md">
+                    ${number}
+                </div>
+            `,
             className: 'bg-transparent border-0',
-            iconSize: [32, 32],
-            iconAnchor: [16, 32],
+            iconSize: [36, 36],
+            iconAnchor: [18, 34],
         });
-    };
     
-    // Function to create a custom icon for the depot
-     const createDepotIcon = () => {
-        return L.divIcon({
-            html: `<div class="relative flex items-center justify-center w-10 h-10">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#1e40af" class="w-10 h-10 drop-shadow-lg">
-                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                    </svg>
-                   </div>`,
+    const createDepotIcon = () =>
+        L.divIcon({
+            html: `
+                <div class="flex flex-col items-center justify-center w-11 h-11 rounded-full bg-blue-600 text-white text-xs font-semibold shadow-lg">
+                    <span>DEP</span>
+                </div>
+            `,
             className: 'bg-transparent border-0',
             iconSize: [40, 40],
-            iconAnchor: [20, 20],
+            iconAnchor: [20, 38],
         });
-    };
 
     const invalidateSize = () => {
         if (mapInstance.current) {

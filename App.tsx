@@ -13,12 +13,38 @@ import { AppContext } from './hooks/useAppContext';
 import { MOCK_TRUCKS, MOCK_STATIONS, MOCK_LOGS, MOCK_FUEL_PRICES } from './constants';
 import type { Truck, GasStation, DeliveryLog, RoutePlan, FuelType } from './types';
 
+const STATIONS_STORAGE_KEY = 'fuelopt_stations';
+const LOGS_STORAGE_KEY = 'fuelopt_logs';
+
+const readStoredData = <T,>(key: string, fallback: T): T => {
+  if (typeof window === 'undefined') {
+    return fallback;
+  }
+  try {
+    const stored = window.localStorage.getItem(key);
+    return stored ? (JSON.parse(stored) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const persistData = <T,>(key: string, value: T) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // ignore quota/serialization errors
+  }
+};
+
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState('dashboard');
   
   const [trucks, setTrucks] = useState<Truck[]>(MOCK_TRUCKS);
-  const [stations, setStations] = useState<GasStation[]>(MOCK_STATIONS);
-  const [logs, setLogs] = useState<DeliveryLog[]>(MOCK_LOGS);
+  const [stations, setStations] = useState<GasStation[]>(() => readStoredData(STATIONS_STORAGE_KEY, MOCK_STATIONS));
+  const [logs, setLogs] = useState<DeliveryLog[]>(() => readStoredData(LOGS_STORAGE_KEY, MOCK_LOGS));
   const [optimizedRoute, setOptimizedRoute] = useState<RoutePlan[] | null>(null);
   const [fuelPrices, setFuelPrices] = useState<Record<FuelType, number>>(MOCK_FUEL_PRICES);
 
@@ -48,6 +74,14 @@ const App: React.FC = () => {
     // Clear interval on component unmount
     return () => clearInterval(consumptionInterval);
   }, []); // Empty dependency array to run only once
+
+  useEffect(() => {
+    persistData(STATIONS_STORAGE_KEY, stations);
+  }, [stations]);
+
+  useEffect(() => {
+    persistData(LOGS_STORAGE_KEY, logs);
+  }, [logs]);
 
   const handleLogin = (user: string, pass: string) => {
     // Mock authentication
