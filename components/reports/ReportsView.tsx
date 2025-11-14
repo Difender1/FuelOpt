@@ -1,14 +1,33 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAppContext } from '../../hooks/useAppContext';
 import { FuelType } from '../../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
+type FuelFilter = FuelType | 'all';
+type DriverFilter = string | 'all';
+
 export const ReportsView: React.FC = () => {
     const { logs, fuelPrices } = useAppContext();
+    const [fuelFilter, setFuelFilter] = useState<FuelFilter>('all');
+    const [driverFilter, setDriverFilter] = useState<DriverFilter>('all');
+
+    const drivers = useMemo(() => {
+        const unique = new Set<string>();
+        logs.forEach(log => unique.add(log.driver));
+        return Array.from(unique).sort();
+    }, [logs]);
+
+    const filteredLogs = useMemo(() => {
+        return logs.filter(log => {
+            const fuelMatch = fuelFilter === 'all' || log.fuelType === fuelFilter;
+            const driverMatch = driverFilter === 'all' || log.driver === driverFilter;
+            return fuelMatch && driverMatch;
+        });
+    }, [logs, fuelFilter, driverFilter]);
 
     const reportData = useMemo(() => {
-        return logs.map(log => {
+        return filteredLogs.map(log => {
             const pricePerLiter = fuelPrices[log.fuelType] || 0;
             const revenue = log.volume * pricePerLiter;
             return {
@@ -17,7 +36,7 @@ export const ReportsView: React.FC = () => {
                 revenue,
             };
         });
-    }, [logs, fuelPrices]);
+    }, [filteredLogs, fuelPrices]);
 
     const totalRevenue = useMemo(() => {
         return reportData.reduce((acc, item) => acc + item.revenue, 0);
@@ -35,16 +54,45 @@ export const ReportsView: React.FC = () => {
 
     return (
         <div className="space-y-8">
-            <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="bg-white p-6 rounded-lg shadow-md space-y-6">
                 <h2 className="text-2xl font-bold text-brand-gray-800 mb-4">Финансовый отчет</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="flex flex-col">
+                        <label className="text-sm font-medium text-brand-gray-600 mb-1">Фильтр по топливу</label>
+                        <select
+                            value={fuelFilter}
+                            onChange={(e) => setFuelFilter(e.target.value as FuelFilter)}
+                            className="border border-brand-gray-300 rounded-md px-3 py-2 text-brand-gray-900 focus:ring-brand-blue-light focus:border-brand-blue-light bg-white"
+                        >
+                            <option value="all">Все типы топлива</option>
+                            {Object.values(FuelType).map(type => (
+                                <option key={type} value={type}>{type}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="flex flex-col">
+                        <label className="text-sm font-medium text-brand-gray-600 mb-1">Фильтр по водителю</label>
+                        <select
+                            value={driverFilter}
+                            onChange={(e) => setDriverFilter(e.target.value as DriverFilter)}
+                            className="border border-brand-gray-300 rounded-md px-3 py-2 text-brand-gray-900 focus:ring-brand-blue-light focus:border-brand-blue-light bg-white"
+                        >
+                            <option value="all">Все водители</option>
+                            {drivers.map(driver => (
+                                <option key={driver} value={driver}>{driver}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div className="bg-brand-gray-50 p-4 rounded-lg text-center">
                         <p className="text-sm text-brand-gray-500">Всего доставок</p>
-                        <p className="text-3xl font-bold text-brand-blue-dark">{logs.length}</p>
+                        <p className="text-3xl font-bold text-brand-blue-dark">{reportData.length}</p>
                     </div>
                     <div className="bg-brand-gray-50 p-4 rounded-lg text-center">
                         <p className="text-sm text-brand-gray-500">Общий объем, л</p>
-                        <p className="text-3xl font-bold text-brand-blue-dark">{logs.reduce((acc, log) => acc + log.volume, 0).toLocaleString('ru-RU')}</p>
+                        <p className="text-3xl font-bold text-brand-blue-dark">{reportData.reduce((acc, log) => acc + log.volume, 0).toLocaleString('ru-RU')}</p>
                     </div>
                     <div className="bg-brand-gray-50 p-4 rounded-lg text-center">
                         <p className="text-sm text-brand-gray-500">Общая выручка, руб.</p>
