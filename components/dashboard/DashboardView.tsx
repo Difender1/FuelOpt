@@ -7,7 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 
 const StatCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode; color: string }> = ({ title, value, icon, color }) => (
     <div className="bg-white p-6 rounded-lg shadow-md flex items-center">
-        <div className={`p-3 rounded-full ${color}`}>
+        <div className={`flex items-center justify-center w-14 h-14 rounded-full text-white shadow-inner shadow-black/10 ${color}`}>
             {icon}
         </div>
         <div className="ml-4">
