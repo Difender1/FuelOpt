@@ -15,6 +15,14 @@ import type { Truck, GasStation, DeliveryLog, RoutePlan, FuelType } from './type
 
 const STATIONS_STORAGE_KEY = 'fuelopt_stations';
 const LOGS_STORAGE_KEY = 'fuelopt_logs';
+const USERS_STORAGE_KEY = 'fuelopt_users';
+const CURRENT_USER_STORAGE_KEY = 'fuelopt_current_user';
+
+interface StoredUser {
+  username: string;
+  password: string;
+  fullName: string;
+}
 
 const readStoredData = <T,>(key: string, fallback: T): T => {
   if (typeof window === 'undefined') {
@@ -53,8 +61,12 @@ const App: React.FC = () => {
   const [selectedStationIdsForPlanner, setSelectedStationIdsForPlanner] = useState<string[]>([]);
 
   // Auth state
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [users, setUsers] = useState<StoredUser[]>(() => readStoredData(USERS_STORAGE_KEY, []));
+  const initialStoredUser = readStoredData<StoredUser | null>(CURRENT_USER_STORAGE_KEY, null);
+  const [currentUser, setCurrentUser] = useState<StoredUser | null>(initialStoredUser);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => Boolean(initialStoredUser));
   const [authError, setAuthError] = useState<string | null>(null);
+  const [authMessage, setAuthMessage] = useState<string | null>(null);
 
   // Fuel consumption simulation
   useEffect(() => {
@@ -83,18 +95,54 @@ const App: React.FC = () => {
     persistData(LOGS_STORAGE_KEY, logs);
   }, [logs]);
 
-  const handleLogin = (user: string, pass: string) => {
-    // Mock authentication
-    if (user === 'logist' && pass === 'password123') {
-      setIsLoggedIn(true);
-      setAuthError(null);
-    } else {
-      setAuthError('Неверное имя пользователя или пароль.');
+  useEffect(() => {
+    persistData(USERS_STORAGE_KEY, users);
+  }, [users]);
+
+  useEffect(() => {
+    if (currentUser) {
+      persistData(CURRENT_USER_STORAGE_KEY, currentUser);
+    } else if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(CURRENT_USER_STORAGE_KEY);
     }
+  }, [currentUser]);
+
+  const handleLogin = (username: string, password: string) => {
+    setAuthMessage(null);
+    const existingUser = users.find(u => u.username === username);
+    if (!existingUser || existingUser.password !== password) {
+      setAuthError('Неверное имя пользователя или пароль.');
+      return;
+    }
+
+    setCurrentUser(existingUser);
+    setIsLoggedIn(true);
+    setAuthError(null);
+  };
+
+  const handleRegister = (fullName: string, username: string, password: string) => {
+    setAuthError(null);
+    setAuthMessage(null);
+
+    if (users.some(u => u.username === username)) {
+      setAuthError('Пользователь с таким именем уже существует.');
+      return false;
+    }
+
+    const newUser: StoredUser = { fullName, username, password };
+    setUsers(prev => [...prev, newUser]);
+    setAuthMessage('Регистрация прошла успешно. Теперь войдите с этими данными.');
+    return true;
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
+    setCurrentUser(null);
+  };
+
+  const resetAuthFeedback = () => {
+    setAuthError(null);
+    setAuthMessage(null);
   };
 
   const appContextValue = useMemo(() => ({
@@ -134,7 +182,15 @@ const App: React.FC = () => {
   };
 
   if (!isLoggedIn) {
-    return <LoginView onLogin={handleLogin} error={authError} />;
+    return (
+      <LoginView
+        onLogin={handleLogin}
+        onRegister={handleRegister}
+        error={authError}
+        message={authMessage}
+        onResetFeedback={resetAuthFeedback}
+      />
+    );
   }
 
   return (
@@ -142,7 +198,7 @@ const App: React.FC = () => {
       <div className="flex h-screen bg-brand-gray-100 text-brand-gray-800">
         <Sidebar activeView={activeView} setActiveView={setActiveView} />
         <div className="flex-1 flex flex-col overflow-hidden">
-          <Header onLogout={handleLogout} />
+          <Header onLogout={handleLogout} userName={currentUser?.fullName ?? 'Пользователь'} />
           <main className="flex-1 overflow-x-hidden overflow-y-auto bg-brand-gray-100 p-4 sm:p-6 lg:p-8">
             {renderView()}
           </main>
