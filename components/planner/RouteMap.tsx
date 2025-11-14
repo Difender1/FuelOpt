@@ -46,6 +46,14 @@ export const RouteMap: React.FC<RouteMapProps> = ({ routePlans, isLoading }) => 
         });
     };
 
+    const invalidateSize = () => {
+        if (mapInstance.current) {
+            setTimeout(() => {
+                mapInstance.current.invalidateSize();
+            }, 50);
+        }
+    };
+
     useEffect(() => {
         if (typeof L === 'undefined') {
             setError("Библиотека карт (Leaflet) не загрузилась.");
@@ -58,6 +66,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({ routePlans, isLoading }) => 
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 }).addTo(mapInstance.current);
+                invalidateSize();
             } catch (e) {
                 console.error("Failed to initialize Leaflet map:", e);
                 setError("Не удалось инициализировать карту.");
@@ -82,6 +91,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({ routePlans, isLoading }) => 
              const depotMarker = L.marker([54.3330, 29.1331], { icon: createDepotIcon() }).addTo(mapInstance.current);
              mapInstance.current.markers = [depotMarker];
              mapInstance.current.setView([54.3330, 29.1331], 11);
+             invalidateSize();
             return;
         }
 
@@ -125,6 +135,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({ routePlans, isLoading }) => 
             });
 
             routingControl.current.addTo(mapInstance.current);
+            invalidateSize();
 
         } catch(e) {
             console.error("Failed to create routing control:", e);
